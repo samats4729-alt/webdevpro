@@ -230,7 +230,7 @@ function BrainNeon({ file }: { file: string }) {
 // --- 3D CANVAS (ФОН) ---
 export default function HeroCanvas() {
     return (
-        <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 1 }}>
+        <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 1, touchAction: 'pan-y' }} className="pointer-events-none md:pointer-events-auto">
             <Canvas dpr={[1, 1.5]} gl={{ toneMapping: THREE.NoToneMapping }}>
                 {/* КАМЕРА БЛИЖЕ ДЛЯ БОЛЬШЕГО МОЗГА */}
                 <PerspectiveCamera makeDefault position={[0, 0, 3.5]} fov={50} />

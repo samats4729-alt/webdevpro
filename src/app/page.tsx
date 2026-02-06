@@ -11,8 +11,16 @@ import AnimatedPricingCard from "@/components/landing/AnimatedPricingCard";
 import NeonButton from "@/components/landing/NeonButton";
 import InteractiveBot from "@/components/layout/InteractiveBot";
 
-// Динамический импорт 3D компонента (только на клиенте)
-const HeroCanvas = dynamic(() => import('@/components/3d/HeroCanvas'), { ssr: false });
+// Динамический импорт 3D компонента (только на клиенте) с placeholder
+const HeroCanvas = dynamic(() => import('@/components/3d/HeroCanvas'), {
+    ssr: false,
+    loading: () => (
+        <div className="absolute inset-0 flex items-center justify-center">
+            {/* Gradient glow placeholder while 3D loads */}
+            <div className="absolute right-[15%] top-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-[#00ff44]/20 rounded-full blur-[100px] animate-pulse" />
+        </div>
+    )
+});
 
 export default function LandingPage() {
     const { t, language, setLanguage } = useLanguage();
