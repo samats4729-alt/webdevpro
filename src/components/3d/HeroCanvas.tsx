@@ -138,20 +138,14 @@ function BrainBase({ file }: { file: string }) {
         const originalPos = obj.children[0].geometry.attributes.position.array
         const originalCount = originalPos.length / 3
 
-        // OPTIMIZATION: Keep 75% of points (skip every 4th)
-        // Calculate visible count: 3 out of every 4 points
-        const fullSets = Math.floor(originalCount / 4)
-        const remainder = originalCount % 4
-        const count = fullSets * 3 + (remainder > 3 ? 3 : remainder) // Approximate enough
+        // OPTIMIZATION: Keep every 2nd point (50% for faster loading)
+        const count = Math.floor(originalCount / 2)
 
         const pos = new Float32Array(count * 3)
         const rnd = new Float32Array(count)
 
         let ptr = 0
-        for (let i = 0; i < originalCount; i++) {
-            // Skip every 4th point (indices 3, 7, 11...)
-            if ((i + 1) % 4 === 0) continue
-
+        for (let i = 0; i < originalCount; i += 2) {
             pos[ptr * 3] = originalPos[i * 3]
             pos[ptr * 3 + 1] = originalPos[i * 3 + 1]
             pos[ptr * 3 + 2] = originalPos[i * 3 + 2]
@@ -189,15 +183,27 @@ function BrainNeon({ file }: { file: string }) {
     const obj = useLoader(OBJLoader, file)
     const [positions, initialPositions, randomness, attrRandom] = useMemo(() => {
         // @ts-ignore
-        const pos = obj.children[0].geometry.attributes.position.array.slice()
-        const count = pos.length / 3
+        const originalPos = obj.children[0].geometry.attributes.position.array
+        const originalCount = originalPos.length / 3
+
+        // OPTIMIZATION: Keep every 3rd point (33% for faster loading)
+        const count = Math.floor(originalCount / 3)
+
+        const pos = new Float32Array(count * 3)
         const rnd = new Float32Array(count)
         const aRnd = new Float32Array(count)
-        for (let i = 0; i < count; i++) {
-            rnd[i] = Math.random()
-            aRnd[i] = Math.random()
+
+        let ptr = 0
+        for (let i = 0; i < originalCount; i += 3) {
+            pos[ptr * 3] = originalPos[i * 3]
+            pos[ptr * 3 + 1] = originalPos[i * 3 + 1]
+            pos[ptr * 3 + 2] = originalPos[i * 3 + 2]
+            rnd[ptr] = Math.random()
+            aRnd[ptr] = Math.random()
+            ptr++
         }
-        return [new Float32Array(pos), new Float32Array(pos), rnd, aRnd]
+
+        return [pos, new Float32Array(pos), rnd, aRnd]
     }, [obj])
 
     useFrame((state) => {
@@ -226,8 +232,8 @@ export default function HeroCanvas() {
     return (
         <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 1 }}>
             <Canvas dpr={[1, 1.5]} gl={{ toneMapping: THREE.NoToneMapping }}>
-                {/* ОТОДВИНУЛ КАМЕРУ НА 2.8, ЕЩЕ БОЛЬШЕ */}
-                <PerspectiveCamera makeDefault position={[0, 0, 4.2]} fov={50} />
+                {/* КАМЕРА БЛИЖЕ ДЛЯ БОЛЬШЕГО МОЗГА */}
+                <PerspectiveCamera makeDefault position={[0, 0, 3.5]} fov={50} />
 
                 {/* ПОЗИЦИЯ [1.2,0,0] - СМЕЩЕНО ВПРАВО */}
                 <group position={[1.2, 0, 0]}>
@@ -242,7 +248,7 @@ export default function HeroCanvas() {
                     {/* <Vignette eskil={false} offset={0.1} darkness={0.8} /> */}
                     <Bloom luminanceThreshold={CONFIG.bloom.threshold} intensity={CONFIG.bloom.intensity} mipmapBlur radius={0.6} />
                 </EffectComposer>
-                <OrbitControls enablePan={false} enableZoom={false} rotateSpeed={0.5} />
+                <OrbitControls enablePan={false} enableZoom={false} enableRotate={false} />
             </Canvas>
         </div >
     )
