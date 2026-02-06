@@ -719,6 +719,25 @@ export async function createWhatsAppClient(options: WhatsAppClientOptions) {
     // Fetch latest version
     const { version } = await fetchLatestBaileysVersion();
 
+    // Generate unique browser fingerprint per bot to avoid detection
+    const OS_OPTIONS = ['Windows', 'Mac OS', 'Linux', 'Ubuntu'];
+    const BROWSER_OPTIONS = ['Chrome', 'Firefox', 'Safari', 'Edge', 'Opera'];
+    const VERSION_OPTIONS = ['10.0', '11.0', '12.0', '10.15', '22.04', '21.10'];
+
+    // Use botId hash to get consistent but unique fingerprint per bot
+    const hash = botId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const osIndex = hash % OS_OPTIONS.length;
+    const browserIndex = (hash * 7) % BROWSER_OPTIONS.length;
+    const versionIndex = (hash * 13) % VERSION_OPTIONS.length;
+
+    const browserFingerprint: [string, string, string] = [
+        OS_OPTIONS[osIndex],
+        BROWSER_OPTIONS[browserIndex],
+        VERSION_OPTIONS[versionIndex]
+    ];
+
+    console.log(`[Baileys] Bot ${botId.substring(0, 8)} using browser: ${browserFingerprint.join('/')}`);
+
     const sock = makeWASocket({
         version,
         logger,
@@ -727,9 +746,8 @@ export async function createWhatsAppClient(options: WhatsAppClientOptions) {
             creds: state.creds,
             keys: makeCacheableSignalKeyStore(state.keys, logger),
         },
-        // Browser signature: [OS Name, Browser Name, Version]
-        // Using "Windows" to appear as a standard desktop session
-        browser: ['Windows', 'Chrome', '10.0'],
+        // Unique browser signature per bot to avoid farm detection
+        browser: browserFingerprint,
         generateHighQualityLinkPreview: true,
         syncFullHistory: false, // Don't sync old messages to prevent timeouts/bans
 
