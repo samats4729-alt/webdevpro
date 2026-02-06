@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
+export const dynamic = 'force-dynamic';
+
 const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -21,7 +23,7 @@ export async function GET(request: NextRequest) {
             .select(`
                 *,
                 bot:bots(id, name, telegram_token),
-                lead:leads(id, phone, telegram_chat_id)
+                lead:leads(id, phone)
             `)
             .eq('reminder_sent', false)
             .eq('status', 'confirmed')
@@ -53,20 +55,8 @@ export async function GET(request: NextRequest) {
 
                 const message = `⏰ Напоминание о записи!\n\n📅 ${dateStr} в ${timeStr}\n\nДо встречи! 🙂`;
 
-                // Send via Telegram if chat_id exists
-                if (apt.lead?.telegram_chat_id && apt.bot?.telegram_token) {
-                    await fetch(`https://api.telegram.org/bot${apt.bot.telegram_token}/sendMessage`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            chat_id: apt.lead.telegram_chat_id,
-                            text: message
-                        })
-                    });
-                    console.log(`[Reminders] Sent Telegram reminder for appointment ${apt.id}`);
-                }
-
-                // TODO: Send via WhatsApp if needed (requires active session)
+                // TODO: Send reminder via WhatsApp (requires active session)
+                console.log(`[Reminders] Reminder prepared for appointment ${apt.id}, phone: ${apt.lead?.phone}`);
 
                 // Mark reminder as sent
                 await supabase
