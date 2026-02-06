@@ -1,0 +1,334 @@
+.neon-button-wrapper {
+    display: inline-block;
+}
+
+.neon-button-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+}
+
+.neon-button {
+    --radius: 18px;
+    outline: none;
+    cursor: pointer;
+    font-size: 13px;
+    background: transparent;
+    border: 0;
+    position: relative;
+    width: 228px;
+    height: 64px;
+    box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.6);
+    border-radius: var(--radius);
+}
+
+.neon-button .glow {
+    position: absolute;
+    inset: 0;
+    box-shadow: 0 0 200px 5px rgba(0, 255, 102, 0.4);
+    pointer-events: none;
+}
+
+.neon-button .glow::before {
+    content: "";
+    position: absolute;
+    margin: auto;
+    background: rgba(0, 255, 102, 0.05);
+    border-radius: 50%;
+    filter: blur(50px);
+    inset: 0;
+    height: 500px;
+    width: 150px;
+    transform: rotate(-45deg);
+}
+
+.neon-button .wave {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    inset: 0;
+    margin: auto;
+    transition: all 0.3s linear;
+}
+
+.neon-button .wave::before,
+.neon-button .wave::after {
+    content: "";
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border: 0.5px solid rgba(0, 255, 102, 0.4);
+    inset: 0;
+    filter: blur(2px);
+    border-radius: 30px;
+}
+
+.neon-button:hover .wave::after {
+    animation: wave 2.2s linear;
+}
+
+@keyframes wave {
+
+    0%,
+    40% {
+        transform: scale(1);
+        opacity: 0;
+        box-shadow: 0 0 30px 10px rgba(0, 255, 102, 0.2), inset 0 0 30px rgba(255, 255, 255, 0.1);
+    }
+
+    60% {
+        transform: scale(1.2, 1.5);
+        opacity: 1;
+    }
+
+    100% {
+        transform: scale(1.6, 2);
+        opacity: 0;
+        box-shadow: 0 0 30px rgba(0, 255, 102, 0.1);
+    }
+}
+
+.neon-button .content {
+    border-radius: var(--radius);
+    overflow: hidden;
+    height: 100%;
+    padding: 2px;
+    background: #004422;
+    box-shadow: inset 0 0 16px 6px #006633, inset 0 -10px 10px -8px #00ff66;
+    position: relative;
+}
+
+.neon-button .glyphs {
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+    position: relative;
+    height: 100%;
+    gap: 10px;
+    border-radius: calc(var(--radius) * 0.85);
+    font-weight: 600;
+    background: #004422;
+    box-shadow: inset 0 0 16px 6px #006633, 0 0 10px 10px rgba(0, 0, 0, 0.2), inset 0 -10px 10px -8px rgb(0, 255, 102);
+    transition: all 0.3s ease;
+    color: #e0ffe0;
+}
+
+.neon-button .icon-1 svg {
+    height: 20px;
+    width: auto;
+    margin-top: 2px;
+}
+
+.neon-button .outline {
+    position: absolute;
+    overflow: hidden;
+    inset: 0;
+    outline: none;
+    border-radius: inherit;
+    transition: all 0.4s ease;
+}
+
+.neon-button .outline::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    width: 120px;
+    height: 300px;
+    margin: auto;
+    background: linear-gradient(to right, transparent 0%, #00ff66 50%, transparent 100%);
+    animation: spin 1.7s linear infinite;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.neon-button .wrap-content {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    transition: all 0.3s ease;
+}
+
+.neon-button:active .wrap-content {
+    transform: scale(0.97, 0.96);
+}
+
+.neon-button .circuit {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%);
+    width: 392px;
+    height: auto;
+    margin-top: -13px;
+    pointer-events: none;
+}
+
+.neon-button .bg {
+    position: absolute;
+    inset: -7px;
+    border-radius: calc(var(--radius) * 1.35);
+    z-index: 1;
+    overflow: hidden;
+    box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.6);
+}
+
+.neon-button .bg::before,
+.neon-button .bg::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: calc(var(--radius) * 1.35);
+}
+
+.neon-button .bg::after {
+    background: black;
+    box-shadow: inset 0 0 0 1px rgba(0, 255, 102, 0.4), inset -2px 0 0 -1px rgba(0, 255, 102, 1), inset 0 -2px 0 -1px rgba(0, 255, 102, 0.1);
+}
+
+.neon-button .bg .shine {
+    transition: all 0.5s linear;
+    color: rgba(0, 255, 102, 0.85);
+}
+
+.neon-button:active .bg .shine {
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.neon-button .bg .shine::before {
+    content: "";
+    position: absolute;
+    z-index: 2;
+    background: currentColor;
+    width: 10px;
+    height: 10px;
+    opacity: 0.3;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    margin: auto;
+    border-radius: 50%;
+    filter: blur(2px);
+    transform: translateY(0) scale(0);
+    animation: shine 2.2s linear infinite;
+}
+
+@keyframes shine {
+    0% {
+        transform: translateY(0) scale(0);
+    }
+
+    20% {
+        transform: translateY(0) scale(25);
+    }
+
+    100% {
+        transform: translateY(-280px) scale(20, 18);
+    }
+}
+
+.neon-button .text span::before {
+    color: #003311;
+    text-shadow: 0 2px 3px #00ff66;
+}
+
+.neon-button:hover .text span::before {
+    animation: char-in 0.7s ease calc(var(--i) * 0.03s);
+}
+
+@keyframes char-in {
+    0% {
+        opacity: 0;
+        transform: translateY(60%);
+        filter: blur(20px);
+        color: #003311;
+    }
+
+    30% {
+        transform: translateY(-15%);
+        opacity: 1;
+        filter: blur(1px);
+        color: #00ff66;
+    }
+
+    60% {
+        transform: translateY(5%);
+        opacity: 1;
+        filter: blur(0);
+    }
+
+    100% {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Circuit Animations relative to Neon Button */
+.neon-button .circuit-path {
+    opacity: 0.3;
+    transition: opacity 0.4s linear;
+}
+
+.neon-button:hover .circuit-path {
+    opacity: 1;
+}
+
+.neon-button .circuit-path .circuit-side path {
+    stroke-dasharray: 200;
+    stroke-dashoffset: 200;
+    animation: line-1 3s ease-in-out infinite;
+    animation-delay: calc(var(--i) * 0.2s);
+}
+
+.neon-button .circuit-path .circuit-bottom path {
+    stroke-dasharray: 250;
+    stroke-dashoffset: -250;
+    animation: line-2 3s ease-in-out infinite;
+    animation-delay: calc(var(--i) * 0.1s);
+}
+
+/* Speed up on hover */
+.neon-button:hover .circuit-path .circuit-side path {
+    animation-duration: 0.6s;
+    stroke-dashoffset: 0;
+    opacity: 1;
+    filter: drop-shadow(0 0 2px #00ff66);
+}
+
+.neon-button:hover .circuit-path .circuit-bottom path {
+    animation-duration: 0.6s;
+    stroke-dashoffset: 0;
+    opacity: 1;
+    filter: drop-shadow(0 0 2px #00ff66);
+}
+
+@keyframes line-1 {
+    0% {
+        stroke-dashoffset: 200;
+    }
+
+    100% {
+        stroke-dashoffset: -200;
+    }
+}
+
+@keyframes line-2 {
+    0% {
+        stroke-dashoffset: -250;
+    }
+
+    100% {
+        stroke-dashoffset: 250;
+    }
+}

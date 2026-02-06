@@ -1,0 +1,303 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --gradient-accent: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+  --gradient-dark: linear-gradient(180deg, #0a0a0a 0%, #0f0f0f 100%);
+  --card-bg: #141414;
+  --card-border: #262626;
+  --glow-green: 0 0 60px rgba(74, 222, 128, 0.15);
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  background: #0a0a0a;
+  color: #ffffff;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+body {
+  min-height: 100vh;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(74, 222, 128, 0.15), transparent),
+    #0a0a0a;
+}
+
+/* Dark Card Style - Transparent */
+@layer components {
+  .dark-card {
+    @apply relative overflow-hidden rounded-xl;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .dark-card:hover {
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .gradient-text {
+    background: var(--gradient-accent);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .btn-primary {
+    @apply relative px-6 py-3 font-semibold rounded-xl overflow-hidden transition-all duration-300 text-black;
+    background: var(--gradient-accent);
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(74, 222, 128, 0.4);
+  }
+
+  .btn-secondary {
+    @apply px-6 py-3 font-semibold rounded-xl transition-all duration-300 border border-card-border hover:border-accent/50 hover:bg-accent/5 text-white;
+  }
+
+  .stat-card {
+    @apply dark-card p-4 transition-all duration-300;
+  }
+
+  .stat-card:hover {
+    box-shadow: var(--glow-green);
+  }
+
+  .sidebar-link {
+    @apply flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 text-gray-400 hover:text-white hover:bg-white/5;
+  }
+
+  .sidebar-link.active {
+    @apply text-accent bg-accent/10;
+  }
+
+  .platform-badge {
+    @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium;
+  }
+
+  .platform-badge.whatsapp {
+    @apply bg-whatsapp/20 text-whatsapp;
+  }
+
+  .platform-badge.telegram {
+    @apply bg-telegram/20 text-telegram;
+  }
+
+  .platform-badge.instagram {
+    @apply bg-instagram/20 text-instagram;
+  }
+
+  .status-dot {
+    @apply w-2 h-2 rounded-full;
+  }
+
+  .status-dot.online {
+    @apply bg-accent animate-pulse;
+    box-shadow: 0 0 8px rgba(74, 222, 128, 0.8);
+  }
+
+  .status-dot.offline {
+    @apply bg-gray-600;
+  }
+
+  /* Sidebar Section Title */
+  .sidebar-section {
+    @apply text-[11px] font-medium uppercase tracking-wider text-gray-500 px-4 mb-2;
+  }
+
+  /* Mini Chart Style */
+  .mini-chart {
+    @apply h-12 flex items-end gap-0.5;
+  }
+
+  .mini-chart-bar {
+    @apply flex-1 bg-accent/30 rounded-t transition-all;
+  }
+
+  .mini-chart-bar:hover {
+    @apply bg-accent/50;
+  }
+
+  /* Notification Item */
+  .notification-item {
+    @apply flex items-start gap-3 p-3 rounded-xl hover:bg-white/5 transition-all cursor-pointer;
+  }
+
+  .notification-dot {
+    @apply w-2 h-2 rounded-full bg-accent mt-2 flex-shrink-0;
+  }
+
+  /* Activity Item */
+  .activity-item {
+    @apply flex items-center gap-3 py-3 border-b border-card-border last:border-0;
+  }
+
+  .activity-icon {
+    @apply w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center text-accent;
+  }
+
+  /* Avatar */
+  .avatar {
+    @apply w-10 h-10 rounded-full bg-gradient-to-br from-accent to-green-600 flex items-center justify-center text-black font-bold;
+  }
+
+  .avatar-sm {
+    @apply w-8 h-8 rounded-full bg-gradient-to-br from-accent to-green-600 flex items-center justify-center text-black text-sm font-bold;
+  }
+
+  /* Search Input */
+  .search-input {
+    @apply w-full bg-dark-100 border border-card-border rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-accent/50 transition-colors;
+  }
+
+  /* Table */
+  .data-table {
+    @apply w-full;
+  }
+
+  .data-table th {
+    @apply text-left text-xs font-medium text-gray-500 uppercase tracking-wider pb-3 border-b border-card-border;
+  }
+
+  .data-table td {
+    @apply py-4 border-b border-card-border;
+  }
+
+  .data-table tr:last-child td {
+    @apply border-0;
+  }
+
+  /* Progress Ring */
+  .progress-ring {
+    @apply relative inline-flex items-center justify-center;
+  }
+
+  .progress-ring-circle {
+    stroke: #262626;
+    fill: none;
+    stroke-width: 8;
+  }
+
+  .progress-ring-progress {
+    stroke: #4ade80;
+    fill: none;
+    stroke-width: 8;
+    stroke-linecap: round;
+    transform: rotate(-90deg);
+    transform-origin: 50% 50%;
+    transition: stroke-dashoffset 0.5s ease;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #141414;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #333333;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #4ade80;
+}
+
+/* Glow Effects */
+.glow-accent {
+  box-shadow: 0 0 40px rgba(74, 222, 128, 0.2);
+}
+
+/* Force white text in inputs */
+input[type="text"],
+input[type="email"],
+input[type="password"] {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  background-color: #0a0a0a !important;
+}
+
+/* Disable autofill background */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px #0a0a0a inset !important;
+  -webkit-text-fill-color: #ffffff !important;
+  caret-color: #ffffff !important;
+  background-color: #0a0a0a !important;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animation-slide-up {
+  animation: slideUp 0.3s ease-out forwards;
+}
+
+/* Dark Theme for Native Form Elements */
+select,
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"],
+input[type="number"] {
+  color-scheme: dark;
+  background-color: #0f0f0f !important;
+  color: #ffffff !important;
+}
+
+select option {
+  background-color: #1a1a1a !important;
+  color: #ffffff !important;
+  padding: 8px 12px;
+}
+
+select:focus,
+input[type="date"]:focus,
+input[type="time"]:focus,
+input[type="number"]:focus {
+  outline: none;
+  border-color: rgba(74, 222, 128, 0.5) !important;
+}
+
+/* Calendar/Date Picker Dark Theme */
+::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  cursor: pointer;
+}
+
+::-webkit-datetime-edit-fields-wrapper {
+  color: #ffffff;
+}
+
+/* Select dropdown arrow */
+select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23888' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 32px;
+}
