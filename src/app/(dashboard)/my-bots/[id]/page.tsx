@@ -3,13 +3,14 @@
 import { useState, useEffect } from "react";
 import PageContainer from "@/components/layout/PageContainer";
 import PageHeader from "@/components/layout/PageHeader";
-import { Bot, ArrowLeft, Workflow, BarChart3, MessageCircle, Loader2, Save, Check, Send, Package } from "lucide-react";
+import { Bot, ArrowLeft, Workflow, BarChart3, MessageCircle, Loader2, Save, Check, Send, Package, Settings } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import WhatsAppConnector from "@/components/whatsapp/WhatsAppConnector";
 import TelegramConnector from "@/components/telegram/TelegramConnector";
 import CatalogTab from "@/components/bot/CatalogTab";
 import { EmulatorWindow, EmulatorTrigger } from "@/components/bot/EmulatorWindow";
+import BotSectionsPanel from "@/components/bot/BotSectionsPanel";
 
 interface BotData {
     id: string;
@@ -28,9 +29,9 @@ export default function BotDetailPage({ params }: { params: { id: string } }) {
     const initialTab = searchParams.get('tab') as any || 'whatsapp';
 
     // Validate tab
-    const validTabs = ['overview', 'flows', 'whatsapp', 'telegram', 'catalog'];
-    const [activeTab, setActiveTab] = useState<'overview' | 'flows' | 'whatsapp' | 'telegram' | 'catalog'>(
-        validTabs.includes(initialTab) ? initialTab : 'whatsapp'
+    const validTabs = ['overview', 'settings', 'flows', 'whatsapp', 'telegram', 'catalog'];
+    const [activeTab, setActiveTab] = useState<'overview' | 'settings' | 'flows' | 'whatsapp' | 'telegram' | 'catalog'>(
+        validTabs.includes(initialTab) ? initialTab : 'settings'
     );
     const [bot, setBot] = useState<BotData | null>(null);
     const [loading, setLoading] = useState(true);
@@ -95,6 +96,12 @@ export default function BotDetailPage({ params }: { params: { id: string } }) {
                     onClick={() => setActiveTab('overview')}
                 />
                 <TabButton
+                    icon={Settings}
+                    label="Настройки"
+                    active={activeTab === 'settings'}
+                    onClick={() => setActiveTab('settings')}
+                />
+                <TabButton
                     icon={Workflow}
                     label="Flows"
                     active={activeTab === 'flows'}
@@ -121,6 +128,7 @@ export default function BotDetailPage({ params }: { params: { id: string } }) {
             </div>
 
             {activeTab === 'overview' && <OverviewTab />}
+            {activeTab === 'settings' && bot && <BotSectionsPanel botId={params.id} botName={bot.name} />}
             {activeTab === 'flows' && <FlowsTab botId={params.id} />}
             {activeTab === 'whatsapp' && <WhatsAppConnector botId={params.id} />}
             {activeTab === 'telegram' && <TelegramConnector botId={params.id} />}
