@@ -306,7 +306,7 @@ export default function AdminPage() {
                                 )}
                             </h3>
 
-                            {otpBot?.status === 'connecting' && qrImage && (
+                            {qrImage && otpBot?.status !== 'connected' && (
                                 <div className="flex flex-col items-center mb-4">
                                     <div className="bg-white p-3 rounded-xl mb-2">
                                         <img src={qrImage} alt="QR" className="w-48 h-48" />
