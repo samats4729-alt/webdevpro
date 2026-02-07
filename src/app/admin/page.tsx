@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Users, CreditCard, MessageCircle, Bot, Calendar, TrendingUp, Send, X, ChevronRight } from 'lucide-react';
+import { Users, CreditCard, MessageCircle, Bot, Calendar, TrendingUp, Send, X, ChevronRight, Wifi, WifiOff, QrCode, RefreshCw, Phone } from 'lucide-react';
+import QRCode from 'qrcode';
 
 interface AdminStats {
     users: { total: number; newToday: number; newWeek: number; newMonth: number };
@@ -26,6 +27,11 @@ export default function AdminPage() {
     const [replyText, setReplyText] = useState('');
     const [sending, setSending] = useState(false);
 
+    // OTP Bot state
+    const [otpBot, setOtpBot] = useState<{ status: string; qrCode: string | null; deviceInfo: any } | null>(null);
+    const [qrImage, setQrImage] = useState<string | null>(null);
+    const [otpLoading, setOtpLoading] = useState(false);
+
     const loadStats = async () => {
         try {
             const res = await fetch('/api/admin');
@@ -48,6 +54,53 @@ export default function AdminPage() {
         const interval = setInterval(loadStats, 30000); // Refresh every 30s
         return () => clearInterval(interval);
     }, []);
+
+    // OTP Bot functions
+    const loadOtpBotStatus = async () => {
+        try {
+            const res = await fetch('/api/admin/otp-bot');
+            if (res.ok) {
+                const data = await res.json();
+                setOtpBot(data);
+                if (data.qrCode) {
+                    const qr = await QRCode.toDataURL(data.qrCode, { width: 200 });
+                    setQrImage(qr);
+                } else {
+                    setQrImage(null);
+                }
+            }
+        } catch (e) {
+            console.error('Error loading OTP bot:', e);
+        }
+    };
+
+    useEffect(() => {
+        loadOtpBotStatus();
+        const otpInterval = setInterval(loadOtpBotStatus, 3000);
+        return () => clearInterval(otpInterval);
+    }, []);
+
+    const connectOtpBot = async () => {
+        setOtpLoading(true);
+        await fetch('/api/admin/otp-bot', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'connect' })
+        });
+        await loadOtpBotStatus();
+        setOtpLoading(false);
+    };
+
+    const disconnectOtpBot = async () => {
+        setOtpLoading(true);
+        await fetch('/api/admin/otp-bot', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'disconnect' })
+        });
+        await loadOtpBotStatus();
+        setOtpLoading(false);
+    };
 
     const sendReply = async () => {
         if (!selectedTicket || !replyText.trim()) return;
@@ -180,6 +233,57 @@ export default function AdminPage() {
                                 </div>
                             </div>
                         </div>
+
+                        {/* OTP Bot Section */}
+                        <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/[0.04]">
+                            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                                <Phone className="w-5 h-5 text-green-400" />
+                                OTP Бот (WhatsApp)
+                                {otpBot?.status === 'connected' && (
+                                    <span className="ml-auto flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 text-xs">
+                                        <Wifi className="w-3 h-3" /> Подключен
+                                    </span>
+                                )}
+                            </h3>
+
+                            {otpBot?.status === 'connecting' && qrImage && (
+                                <div className="flex flex-col items-center mb-4">
+                                    <div className="bg-white p-3 rounded-xl mb-2">
+                                        <img src={qrImage} alt="QR" className="w-48 h-48" />
+                                    </div>
+                                    <p className="text-xs text-gray-500 text-center">Сканируйте в WhatsApp → Связанные устройства</p>
+                                </div>
+                            )}
+
+                            {otpBot?.status === 'connected' && otpBot?.deviceInfo && (
+                                <div className="mb-4 p-3 rounded-xl bg-white/[0.02] text-sm">
+                                    <p className="text-gray-400">Номер: <span className="text-white">{otpBot.deviceInfo.phone || '...'}</span></p>
+                                </div>
+                            )}
+
+                            <div className="flex gap-2">
+                                {otpBot?.status !== 'connected' ? (
+                                    <button
+                                        onClick={connectOtpBot}
+                                        disabled={otpLoading}
+                                        className="flex-1 flex items-center justify-center gap-2 py-2 rounded-xl bg-green-500 hover:bg-green-600 text-white text-sm font-medium disabled:opacity-50"
+                                    >
+                                        {otpLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <QrCode className="w-4 h-4" />}
+                                        Подключить
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={disconnectOtpBot}
+                                        disabled={otpLoading}
+                                        className="flex-1 flex items-center justify-center gap-2 py-2 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-400 text-sm font-medium"
+                                    >
+                                        <WifiOff className="w-4 h-4" />
+                                        Отключить
+                                    </button>
+                                )}
+                            </div>
+                            <p className="mt-3 text-xs text-gray-500">Этот бот отправляет коды авторизации через WhatsApp</p>
+                        </div>
                     </div>
 
                     {/* Right Column - Support Chat */}
@@ -206,8 +310,8 @@ export default function AdminPage() {
                                             key={ticket.id}
                                             onClick={() => setSelectedTicket(ticket)}
                                             className={`w-full p-3 rounded-xl text-left transition-all flex items-center justify-between ${selectedTicket?.id === ticket.id
-                                                    ? 'bg-emerald-500/10 border border-emerald-500/30'
-                                                    : 'bg-white/[0.02] hover:bg-white/[0.04] border border-transparent'
+                                                ? 'bg-emerald-500/10 border border-emerald-500/30'
+                                                : 'bg-white/[0.02] hover:bg-white/[0.04] border border-transparent'
                                                 }`}
                                         >
                                             <div>
@@ -241,8 +345,8 @@ export default function AdminPage() {
                                         <div
                                             key={msg.id}
                                             className={`p-2 rounded-lg text-sm max-w-[80%] ${msg.sender_type === 'admin'
-                                                    ? 'ml-auto bg-emerald-500/20 text-emerald-100'
-                                                    : 'bg-white/[0.06]'
+                                                ? 'ml-auto bg-emerald-500/20 text-emerald-100'
+                                                : 'bg-white/[0.06]'
                                                 }`}
                                         >
                                             {msg.message}
