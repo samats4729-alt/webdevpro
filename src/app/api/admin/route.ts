@@ -1,10 +1,10 @@
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
 
     // Get user stats
     const { data: profiles, count: totalUsers } = await supabase
@@ -74,7 +74,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
 
     const body = await req.json();
     const { ticket_id, message, action } = body;
