@@ -24,18 +24,21 @@ export async function POST(req: NextRequest) {
     if (action === 'connect') {
         // Start WhatsApp connection
         try {
-            const client = await createWhatsAppClient({
+            await createWhatsAppClient({
                 botId: OTP_BOT_ID,
                 autoReplyEnabled: false,
                 flowRules: []
             });
 
-            // createWhatsAppClient already initializes
-
-            // Wait a bit for QR code to generate
-            await new Promise(resolve => setTimeout(resolve, 2000));
-
-            const session = getWhatsAppSession(OTP_BOT_ID);
+            // Wait for QR code to generate (up to 10 seconds with retries)
+            let session = null;
+            for (let i = 0; i < 10; i++) {
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                session = getWhatsAppSession(OTP_BOT_ID);
+                if (session?.qrCode || session?.status === 'connected') {
+                    break;
+                }
+            }
 
             return NextResponse.json({
                 success: true,
