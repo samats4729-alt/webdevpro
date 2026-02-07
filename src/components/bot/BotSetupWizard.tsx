@@ -13,16 +13,21 @@ interface WizardStep {
 interface WizardData {
     settings: {
         name: string;
-        platform: string;
+        platforms: string[];
         description: string;
     };
     greeting: {
         mode: 'ai' | 'template';
         text: string;
+        trigger?: string;
+        keywords?: string[];
+        media?: string;
+        ai_style?: string;
     };
     services: {
         mode: 'ai' | 'template';
-        items: { name: string; price: number }[];
+        items: { name: string; price: number; category?: string; description?: string; image?: string }[];
+        ai_prompt?: string;
     };
     schedule: {
         mode: 'ai' | 'template';
@@ -57,34 +62,51 @@ interface Props {
     botId: string;
     botName: string;
     onComplete: () => void;
-    initialData?: Partial<WizardData>;
+    initialData?: any; // Using any to handle migration from platform string to platforms array
 }
 
 export default function BotSetupWizard({ botId, botName, onComplete, initialData }: Props) {
     const [step, setStep] = useState(0);
     const [saving, setSaving] = useState(false);
-    const [data, setData] = useState<WizardData>({
-        settings: {
-            name: botName,
-            platform: 'whatsapp',
-            description: '',
-        },
-        greeting: {
-            mode: initialData?.greeting?.mode || 'ai',
-            text: initialData?.greeting?.text || `Привет! Я бот ${botName}. Чем могу помочь?`,
-        },
-        services: {
-            mode: initialData?.services?.mode || 'template',
-            items: initialData?.services?.items || [{ name: '', price: 0 }],
-        },
-        schedule: {
-            mode: initialData?.schedule?.mode || 'template',
-            days: initialData?.schedule?.days || DEFAULT_DAYS,
-        },
-        faq: {
-            mode: initialData?.faq?.mode || 'ai',
-            items: initialData?.faq?.items || [{ question: '', answer: '' }],
-        },
+
+    // Initialize state
+    const [data, setData] = useState<WizardData>(() => {
+        // Handle platform migration
+        let platforms = ['whatsapp'];
+        if (initialData?.settings?.platform) {
+            platforms = [initialData.settings.platform];
+        } else if (initialData?.settings?.platforms) {
+            platforms = initialData.settings.platforms;
+        }
+
+        return {
+            settings: {
+                name: initialData?.settings?.name || botName,
+                platforms: platforms,
+                description: initialData?.settings?.description || '',
+            },
+            greeting: {
+                mode: initialData?.greeting?.mode || 'ai',
+                text: initialData?.greeting?.text || `Привет! Я бот ${botName}. Чем могу помочь?`,
+                trigger: initialData?.greeting?.trigger || 'all',
+                keywords: initialData?.greeting?.keywords || [],
+                media: initialData?.greeting?.media || null,
+                ai_style: initialData?.greeting?.ai_style || null,
+            },
+            services: {
+                mode: initialData?.services?.mode || 'template',
+                items: initialData?.services?.items || [{ name: '', price: 0, category: '', description: '', image: null }],
+                ai_prompt: initialData?.services?.ai_prompt || null,
+            },
+            schedule: {
+                mode: initialData?.schedule?.mode || 'template',
+                days: initialData?.schedule?.days || DEFAULT_DAYS,
+            },
+            faq: {
+                mode: initialData?.faq?.mode || 'ai',
+                items: initialData?.faq?.items || [{ question: '', answer: '' }],
+            },
+        };
     });
 
     const currentStep = STEPS[step];
@@ -106,12 +128,17 @@ export default function BotSetupWizard({ botId, botName, onComplete, initialData
             });
 
             // 2. Update bot details (name, platform)
+            // For now, we take the primary platform or join them.
+            // Assuming backend expects a single string for legacy 'platform' column,
+            // we'll send the FIRST selected platform as the primary one.
+            const primaryPlatform = data.settings.platforms[0] || 'whatsapp';
+
             await fetch(`/api/bots/${botId}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     name: data.settings.name,
-                    platform: data.settings.platform,
+                    platform: primaryPlatform, // Legacy field
                     description: data.settings.description
                 }),
             });
@@ -148,12 +175,16 @@ export default function BotSetupWizard({ botId, botName, onComplete, initialData
     const getPreviewMessage = (): string => {
         switch (step) {
             case 0: // Settings
-                return `Привет! Я ${data.settings.name}. \nПлатформа: ${data.settings.platform}\n${data.settings.description}`;
+                return `Привет! Я ${data.settings.name}. \nПлатформы: ${data.settings.platforms.join(', ')}\n${data.settings.description}`;
             case 1: // Greeting
+                const triggerInfo = data.greeting.trigger === 'keyword'
+                    ? `(По словам: ${data.greeting.keywords?.join(', ')})`
+                    : data.greeting.trigger === 'start' ? '(По кнопке Старт)' : '';
+
                 if (data.greeting.mode === 'ai') {
-                    return `🤖 Привет! Я ваш ИИ-ассистент ${data.settings.name}. Чем могу помочь сегодня?`;
+                    return `🤖 Привет! Я ваш ИИ-ассистент ${data.settings.name}. ${triggerInfo}\nЧем могу помочь сегодня?`;
                 }
-                return data.greeting.text || 'Введите приветствие...';
+                return `${data.greeting.text || 'Введите приветствие...'}\n${triggerInfo}`;
             case 2: // Services
                 if (data.services.mode === 'ai') {
                     return '🤖 Расскажу о наших услугах! Вот что мы предлагаем...';
@@ -229,6 +260,7 @@ export default function BotSetupWizard({ botId, botName, onComplete, initialData
                         <GreetingStep
                             data={data.greeting}
                             onChange={updateGreeting}
+                            botName={data.settings.name}
                         />
                     )}
                     {step === 2 && (

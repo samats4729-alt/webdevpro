@@ -7,8 +7,19 @@ import BotSetupWizard from "./BotSetupWizard";
 import { GreetingStep, ServicesStep, ScheduleStep, FaqStep, PhonePreview, BotSettingsStep } from "./BotWizardSteps";
 
 interface SectionData {
-    greeting: { mode: 'ai' | 'template'; text: string };
-    services: { mode: 'ai' | 'template'; items: { name: string; price: number }[] };
+    greeting: {
+        mode: 'ai' | 'template';
+        text: string;
+        trigger?: string;
+        keywords?: string[];
+        media?: string;
+        ai_style?: string;
+    };
+    services: {
+        mode: 'ai' | 'template';
+        items: { name: string; price: number; category?: string; description?: string; image?: string }[];
+        ai_prompt?: string;
+    };
     schedule: { mode: 'ai' | 'template'; days: { day: string; enabled: boolean; from: string; to: string }[] };
     faq: { mode: 'ai' | 'template'; items: { question: string; answer: string }[] };
 }
@@ -112,11 +123,29 @@ export default function BotSectionsPanel({ botId, botName, platform, description
         if (sectionId === 'settings') {
             setEditData({
                 name: botName,
-                platform: platform || 'whatsapp',
+                platforms: [platform || 'whatsapp'], // Convert single platform to array
                 description: description || ''
             });
         } else {
-            setEditData(JSON.parse(JSON.stringify(data))); // Deep copy
+            // Ensure greeting fields exist if not present in legacy data
+            const currentData = JSON.parse(JSON.stringify(data));
+            if (currentData.greeting && !currentData.greeting.trigger) {
+                currentData.greeting.trigger = 'all';
+                currentData.greeting.keywords = [];
+                currentData.greeting.media = null;
+                currentData.greeting.ai_style = null;
+            }
+            if (currentData.services && !currentData.services.items[0]?.category) {
+                // Migration for legacy services
+                currentData.services.items = currentData.services.items.map((item: any) => ({
+                    ...item,
+                    category: item.category || 'Общее',
+                    description: item.description || '',
+                    image: item.image || null
+                }));
+                currentData.services.ai_prompt = null;
+            }
+            setEditData(currentData);
         }
     };
 
@@ -130,10 +159,18 @@ export default function BotSectionsPanel({ botId, botName, platform, description
         setSaving(true);
         try {
             if (editingSection === 'settings') {
+                const primaryPlatform = (editData.platforms && editData.platforms.length > 0)
+                    ? editData.platforms[0]
+                    : 'whatsapp';
+
                 await fetch(`/api/bots/${botId}`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(editData),
+                    body: JSON.stringify({
+                        name: editData.name,
+                        platform: primaryPlatform, // Send primary platform
+                        description: editData.description
+                    }),
                 });
                 window.location.reload(); // Reload to update bot name/platform in header
             } else {
@@ -170,7 +207,8 @@ export default function BotSectionsPanel({ botId, botName, platform, description
         if (!editData || !editingSection) return '';
 
         if (editingSection === 'settings') {
-            return `Привет! Я ${editData.name}. \nПлатформа: ${editData.platform}\n${editData.description}`;
+            const platforms = editData.platforms ? editData.platforms.join(', ') : '';
+            return `Привет! Я ${editData.name}. \nПлатформы: ${platforms}\n${editData.description}`;
         }
 
         // Cast editData to SectionData for the following sections
@@ -179,16 +217,31 @@ export default function BotSectionsPanel({ botId, botName, platform, description
 
         switch (section) {
             case 'greeting':
+                const triggerInfo = data.greeting.trigger === 'keyword'
+                    ? `(По словам: ${data.greeting.keywords?.join(', ')})`
+                    : data.greeting.trigger === 'start' ? '(По кнопке Старт)' : '';
+
                 if (data.greeting.mode === 'ai') {
-                    return `🤖 Привет! Я ваш ИИ-ассистент ${botName}. Чем могу помочь сегодня?`;
+                    return `🤖 Привет! Я ваш ИИ-ассистент ${botName}. ${triggerInfo}\nЧем могу помочь сегодня?`;
                 }
-                return data.greeting.text || 'Введите приветствие...';
+                return `${data.greeting.text || 'Введите приветствие...'}\n${triggerInfo}`;
             case 'services':
                 if (data.services.mode === 'ai') {
                     return '🤖 Расскажу о наших услугах! Вот что мы предлагаем...';
                 }
                 const services = (data.services.items || []).filter((s) => s.name);
                 if (services.length === 0) return 'Добавьте услуги...';
+
+                // Group by category if present
+                const hasCategories = services.some(s => s.category);
+                if (hasCategories) {
+                    const categories = Array.from(new Set(services.map(s => s.category || 'Общее')));
+                    return `💰 Наши услуги:\n\n${categories.map(cat => {
+                        const catServices = services.filter(s => (s.category || 'Общее') === cat);
+                        return `*${cat}*\n${catServices.map(s => `• ${s.name} — ${s.price}₸`).join('\n')}`;
+                    }).join('\n\n')}`;
+                }
+
                 return `💰 Наши услуги:\n${services.map((s) => `• ${s.name} — ${s.price}₸`).join('\n')}`;
             case 'schedule':
                 if (data.schedule.mode === 'ai') {
@@ -228,7 +281,7 @@ export default function BotSectionsPanel({ botId, botName, platform, description
                     ...data,
                     settings: {
                         name: botName,
-                        platform: platform || 'whatsapp',
+                        platforms: [platform || 'whatsapp'],
                         description: description || ''
                     }
                 }}
@@ -316,6 +369,7 @@ export default function BotSectionsPanel({ botId, botName, platform, description
                                     <GreetingStep
                                         data={editData.greeting}
                                         onChange={(updates) => updateEditData('greeting', updates)}
+                                        botName={botName}
                                     />
                                 )}
                                 {editingSection === 'services' && (
