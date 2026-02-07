@@ -27,6 +27,7 @@ interface BotData {
 export default function BotDetailPage({ params }: { params: { id: string } }) {
     const searchParams = useSearchParams();
     const initialTab = searchParams.get('tab') as any || 'whatsapp';
+    const isWizardMode = searchParams.get('wizard') === 'true';
 
     // Validate tab
     const validTabs = ['overview', 'settings', 'flows', 'whatsapp', 'telegram', 'catalog'];
@@ -134,13 +135,17 @@ export default function BotDetailPage({ params }: { params: { id: string } }) {
             {activeTab === 'telegram' && <TelegramConnector botId={params.id} />}
             {activeTab === 'catalog' && <CatalogTab botId={params.id} />}
 
-            <EmulatorTrigger onClick={() => setIsEmulatorOpen(true)} />
-            <EmulatorWindow
-                botId={params.id}
-                botName={bot?.name || 'Bot'}
-                isOpen={isEmulatorOpen}
-                onClose={() => setIsEmulatorOpen(false)}
-            />
+            {!isWizardMode && (
+                <>
+                    <EmulatorTrigger onClick={() => setIsEmulatorOpen(true)} />
+                    <EmulatorWindow
+                        botId={params.id}
+                        botName={bot?.name || 'Bot'}
+                        isOpen={isEmulatorOpen}
+                        onClose={() => setIsEmulatorOpen(false)}
+                    />
+                </>
+            )}
         </PageContainer>
     );
 }

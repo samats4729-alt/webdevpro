@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { Sparkles, FileText, Clock, HelpCircle, Plus, Settings } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
+import { Sparkles, FileText, Clock, HelpCircle, Plus, Settings, Loader2, X, Save } from "lucide-react";
 import BotSetupWizard from "./BotSetupWizard";
+import { GreetingStep, ServicesStep, ScheduleStep, FaqStep, PhonePreview } from "./BotWizardSteps";
 
 interface SectionData {
     greeting: { mode: 'ai' | 'template'; text: string };
@@ -14,7 +16,6 @@ interface SectionData {
 interface Props {
     botId: string;
     botName: string;
-    initialData?: SectionData;
 }
 
 const SECTIONS = [
@@ -24,10 +25,52 @@ const SECTIONS = [
     { id: 'faq', title: 'FAQ', icon: HelpCircle, color: 'amber' },
 ];
 
-export default function BotSectionsPanel({ botId, botName, initialData }: Props) {
+export default function BotSectionsPanel({ botId, botName }: Props) {
+    const searchParams = useSearchParams();
+    const isNewBot = searchParams.get('wizard') === 'true';
+
     const [editingSection, setEditingSection] = useState<string | null>(null);
-    const [data, setData] = useState<SectionData | null>(initialData || null);
-    const [showWizard, setShowWizard] = useState(!initialData);
+    const [data, setData] = useState<SectionData | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [showWizard, setShowWizard] = useState(false);
+    const [saving, setSaving] = useState(false);
+
+    // Initial data for edit modal (to support canceling changes)
+    const [editData, setEditData] = useState<SectionData | null>(null);
+
+    // Load sections on mount
+    useEffect(() => {
+        loadSections();
+    }, [botId]);
+
+    const loadSections = async () => {
+        try {
+            const res = await fetch(`/api/bots/${botId}/sections`);
+            if (res.ok) {
+                const existingData = await res.json();
+                if (existingData) {
+                    setData(existingData);
+                    setShowWizard(false);
+                } else {
+                    // No data - show wizard for new bots
+                    setShowWizard(true);
+                }
+            } else {
+                setShowWizard(true);
+            }
+        } catch (e) {
+            setShowWizard(true);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Force wizard for new bots
+    useEffect(() => {
+        if (isNewBot && !loading) {
+            setShowWizard(true);
+        }
+    }, [isNewBot, loading]);
 
     const getSectionSummary = (sectionId: string): string => {
         if (!data) return 'Не настроено';
@@ -63,6 +106,89 @@ export default function BotSectionsPanel({ botId, botName, initialData }: Props)
         } catch (e) { }
         setShowWizard(false);
     };
+
+    const openEditModal = (sectionId: string) => {
+        setEditingSection(sectionId);
+        setEditData(JSON.parse(JSON.stringify(data))); // Deep copy
+    };
+
+    const closeEditModal = () => {
+        setEditingSection(null);
+        setEditData(null);
+    };
+
+    const handleSaveSection = async () => {
+        if (!editData) return;
+        setSaving(true);
+        try {
+            await fetch(`/api/bots/${botId}/sections`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(editData),
+            });
+            setData(editData);
+            setEditingSection(null);
+        } catch (error) {
+            console.error('Failed to save:', error);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const updateEditData = (section: keyof SectionData, updates: any) => {
+        if (!editData) return;
+        setEditData({
+            ...editData,
+            [section]: { ...editData[section], ...updates }
+        });
+    };
+
+    // Generate preview message
+    const getPreviewMessage = (): string => {
+        if (!editData || !editingSection) return '';
+
+        const section = editingSection as keyof SectionData;
+
+        switch (section) {
+            case 'greeting':
+                if (editData.greeting.mode === 'ai') {
+                    return `🤖 Привет! Я ваш ИИ-ассистент ${botName}. Чем могу помочь сегодня?`;
+                }
+                return editData.greeting.text || 'Введите приветствие...';
+            case 'services':
+                if (editData.services.mode === 'ai') {
+                    return '🤖 Расскажу о наших услугах! Вот что мы предлагаем...';
+                }
+                const services = editData.services.items.filter(s => s.name);
+                if (services.length === 0) return 'Добавьте услуги...';
+                return `💰 Наши услуги:\n${services.map(s => `• ${s.name} — ${s.price}₸`).join('\n')}`;
+            case 'schedule':
+                if (editData.schedule.mode === 'ai') {
+                    return '🤖 Мы работаем по удобному графику. Когда вам удобно?';
+                }
+                const workDays = editData.schedule.days.filter(d => d.enabled);
+                if (workDays.length === 0) return 'Укажите рабочие дни...';
+                return `📅 График работы:\n${workDays.map(d => `• ${d.day}: ${d.from} - ${d.to}`).join('\n')}`;
+            case 'faq':
+                if (editData.faq.mode === 'ai') {
+                    return '🤖 Отвечу на любые ваши вопросы!';
+                }
+                const faqs = editData.faq.items.filter(f => f.question);
+                if (faqs.length === 0) return 'Добавьте частые вопросы...';
+                return faqs[0].answer || 'Введите ответ...';
+            default:
+                return '';
+        }
+    };
+
+
+    if (loading) {
+        return (
+            <div className="flex justify-center py-12">
+                <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
+            </div>
+        );
+    }
 
     if (showWizard) {
         return (
@@ -101,21 +227,21 @@ export default function BotSectionsPanel({ botId, botName, initialData }: Props)
                     return (
                         <button
                             key={section.id}
-                            onClick={() => setEditingSection(section.id)}
+                            onClick={() => openEditModal(section.id)}
                             className={`p-4 rounded-2xl border text-left transition-all hover:scale-[1.02] ${isConfigured
-                                    ? 'bg-white/[0.03] border-white/[0.08] hover:border-white/[0.15]'
-                                    : 'bg-white/[0.02] border-dashed border-white/[0.1] hover:border-white/[0.2]'
+                                ? 'bg-white/[0.03] border-white/[0.08] hover:border-white/[0.15]'
+                                : 'bg-white/[0.02] border-dashed border-white/[0.1] hover:border-white/[0.2]'
                                 }`}
                         >
                             <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${section.color === 'emerald' ? 'bg-emerald-500/20' :
-                                    section.color === 'blue' ? 'bg-blue-500/20' :
-                                        section.color === 'purple' ? 'bg-purple-500/20' :
-                                            'bg-amber-500/20'
+                                section.color === 'blue' ? 'bg-blue-500/20' :
+                                    section.color === 'purple' ? 'bg-purple-500/20' :
+                                        'bg-amber-500/20'
                                 }`}>
                                 <Icon className={`w-5 h-5 ${section.color === 'emerald' ? 'text-emerald-400' :
-                                        section.color === 'blue' ? 'text-blue-400' :
-                                            section.color === 'purple' ? 'text-purple-400' :
-                                                'text-amber-400'
+                                    section.color === 'blue' ? 'text-blue-400' :
+                                        section.color === 'purple' ? 'text-purple-400' :
+                                            'text-amber-400'
                                     }`} />
                             </div>
                             <h3 className="font-medium text-white text-sm mb-1">{section.title}</h3>
@@ -125,7 +251,78 @@ export default function BotSectionsPanel({ botId, botName, initialData }: Props)
                 })}
             </div>
 
-            {/* Section Edit Modal - TODO: later */}
+            {/* Edit Modal */}
+            {editingSection && editData && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+                    <div className="bg-[#0a0a0a] border border-white/10 rounded-3xl w-full max-w-5xl h-[85vh] flex overflow-hidden shadow-2xl">
+
+                        {/* Left: Settings */}
+                        <div className="flex-1 flex flex-col min-w-0 border-r border-white/10">
+                            <div className="p-6 border-b border-white/10 flex items-center justify-between">
+                                <h3 className="text-lg font-semibold text-white">
+                                    {SECTIONS.find(s => s.id === editingSection)?.title}
+                                </h3>
+                                <button onClick={closeEditModal} className="text-gray-400 hover:text-white">
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto p-6">
+                                {editingSection === 'greeting' && (
+                                    <GreetingStep
+                                        data={editData.greeting}
+                                        onChange={(updates) => updateEditData('greeting', updates)}
+                                    />
+                                )}
+                                {editingSection === 'services' && (
+                                    <ServicesStep
+                                        data={editData.services}
+                                        onChange={(updates) => updateEditData('services', updates)}
+                                    />
+                                )}
+                                {editingSection === 'schedule' && (
+                                    <ScheduleStep
+                                        data={editData.schedule}
+                                        onChange={(updates) => updateEditData('schedule', updates)}
+                                    />
+                                )}
+                                {editingSection === 'faq' && (
+                                    <FaqStep
+                                        data={editData.faq}
+                                        onChange={(updates) => updateEditData('faq', updates)}
+                                    />
+                                )}
+                            </div>
+
+                            <div className="p-6 border-t border-white/10 flex justify-end gap-3">
+                                <button
+                                    onClick={closeEditModal}
+                                    className="px-4 py-2 text-sm text-gray-400 hover:text-white"
+                                >
+                                    Отмена
+                                </button>
+                                <button
+                                    onClick={handleSaveSection}
+                                    disabled={saving}
+                                    className="flex items-center gap-2 px-6 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium disabled:opacity-50"
+                                >
+                                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                    Сохранить
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Right: Preview */}
+                        <div className="w-[360px] bg-[#111] p-8 hidden lg:flex flex-col items-center justify-center bg-[url('/grid-pattern.svg')]">
+                            <div className="mb-6 text-center">
+                                <h4 className="text-white font-medium mb-1">Live Preview</h4>
+                                <p className="text-xs text-gray-500">Как это видит клиент</p>
+                            </div>
+                            <PhonePreview message={getPreviewMessage()} botName={botName} />
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

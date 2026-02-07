@@ -96,7 +96,7 @@ export default function MyBotsPage() {
                         nodes: defaultRules
                     }]);
 
-                router.push(`/my-bots/${data.id}`);
+                router.push(`/my-bots/${data.id}?tab=settings&wizard=true`);
             }
         } catch (error: any) {
             console.error('Error creating bot:', error);
