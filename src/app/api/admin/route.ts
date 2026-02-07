@@ -3,16 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
-// Admin email - set in .env.local as ADMIN_EMAIL
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'samat@tenderai.kz';
-
 export async function GET() {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user || user.email !== ADMIN_EMAIL) {
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
 
     // Get user stats
     const { data: profiles, count: totalUsers } = await supabase
@@ -83,11 +75,6 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user || user.email !== ADMIN_EMAIL) {
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
 
     const body = await req.json();
     const { ticket_id, message, action } = body;

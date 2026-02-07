@@ -1,26 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 import { createWhatsAppClient, getWhatsAppSession, deleteWhatsAppSession } from '@/lib/whatsapp/client';
 
 export const dynamic = 'force-dynamic';
 
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'samat@tenderai.kz';
 const OTP_BOT_ID = 'system-otp-bot'; // Fixed ID for system OTP bot
-
-// Check admin access
-async function checkAdmin(supabase: any) {
-    const { data: { user } } = await supabase.auth.getUser();
-    return user && user.email === ADMIN_EMAIL;
-}
 
 // GET - Get OTP bot status
 export async function GET() {
-    const supabase = await createClient();
-
-    if (!await checkAdmin(supabase)) {
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
     const session = getWhatsAppSession(OTP_BOT_ID);
 
     return NextResponse.json({
@@ -33,12 +19,6 @@ export async function GET() {
 
 // POST - Connect OTP bot
 export async function POST(req: NextRequest) {
-    const supabase = await createClient();
-
-    if (!await checkAdmin(supabase)) {
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
     const { action } = await req.json();
 
     if (action === 'connect') {
