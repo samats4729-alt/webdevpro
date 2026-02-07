@@ -32,6 +32,32 @@ export default function AdminPage() {
     const [qrImage, setQrImage] = useState<string | null>(null);
     const [otpLoading, setOtpLoading] = useState(false);
 
+    // Admin auth state
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [adminPassword, setAdminPassword] = useState('');
+    const [authError, setAuthError] = useState('');
+
+    // Secret admin password - change this or move to env
+    const ADMIN_SECRET = process.env.NEXT_PUBLIC_ADMIN_SECRET || 'admin123';
+
+    const handleAdminLogin = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (adminPassword === ADMIN_SECRET) {
+            setIsAuthenticated(true);
+            setAuthError('');
+            localStorage.setItem('admin_auth', 'true');
+        } else {
+            setAuthError('Неверный пароль');
+        }
+    };
+
+    // Check localStorage on mount
+    useEffect(() => {
+        if (localStorage.getItem('admin_auth') === 'true') {
+            setIsAuthenticated(true);
+        }
+    }, []);
+
     const loadStats = async () => {
         try {
             const res = await fetch('/api/admin');
@@ -125,18 +151,52 @@ export default function AdminPage() {
         loadStats();
     };
 
-    if (loading) return (
+    if (loading && isAuthenticated) return (
         <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
             <div className="w-8 h-8 border-2 border-white/20 border-t-emerald-500 rounded-full animate-spin" />
+        </div>
+    );
+
+    // Admin login form
+    if (!isAuthenticated) return (
+        <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+            <div className="w-full max-w-sm p-8 bg-white/[0.02] border border-white/[0.06] rounded-2xl">
+                <div className="text-center mb-6">
+                    <div className="text-4xl mb-3">🔐</div>
+                    <h1 className="text-xl font-bold text-white">Админ-панель</h1>
+                    <p className="text-sm text-gray-500">Введите пароль администратора</p>
+                </div>
+                <form onSubmit={handleAdminLogin} className="space-y-4">
+                    {authError && (
+                        <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm text-center">
+                            {authError}
+                        </div>
+                    )}
+                    <input
+                        type="password"
+                        value={adminPassword}
+                        onChange={(e) => setAdminPassword(e.target.value)}
+                        placeholder="Пароль"
+                        className="w-full px-4 py-3 bg-white/[0.04] border border-white/[0.08] rounded-xl text-white placeholder:text-gray-600 focus:outline-none focus:border-emerald-500/50"
+                        autoFocus
+                    />
+                    <button
+                        type="submit"
+                        className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-medium rounded-xl transition-all"
+                    >
+                        Войти
+                    </button>
+                </form>
+            </div>
         </div>
     );
 
     if (error) return (
         <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
             <div className="text-center">
-                <div className="text-6xl mb-4">🔒</div>
+                <div className="text-6xl mb-4">⚠️</div>
                 <p className="text-xl text-white mb-2">{error}</p>
-                <p className="text-gray-500">Эта страница доступна только администратору</p>
+                <p className="text-gray-500">Ошибка загрузки данных</p>
             </div>
         </div>
     );
