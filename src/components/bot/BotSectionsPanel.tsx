@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { Sparkles, FileText, Clock, HelpCircle, Plus, Settings, Loader2, X, Save } from "lucide-react";
 import BotSetupWizard from "./BotSetupWizard";
-import { GreetingStep, ServicesStep, ScheduleStep, FaqStep, PhonePreview } from "./BotWizardSteps";
+import { GreetingStep, ServicesStep, ScheduleStep, FaqStep, PhonePreview, BotSettingsStep } from "./BotWizardSteps";
 
 interface SectionData {
     greeting: { mode: 'ai' | 'template'; text: string };
@@ -16,16 +16,19 @@ interface SectionData {
 interface Props {
     botId: string;
     botName: string;
+    platform?: string;
+    description?: string;
 }
 
 const SECTIONS = [
+    { id: 'settings', title: 'О боте', icon: Settings, color: 'gray' },
     { id: 'greeting', title: 'Приветствие', icon: Sparkles, color: 'emerald' },
     { id: 'services', title: 'Услуги', icon: FileText, color: 'blue' },
     { id: 'schedule', title: 'График', icon: Clock, color: 'purple' },
     { id: 'faq', title: 'FAQ', icon: HelpCircle, color: 'amber' },
 ];
 
-export default function BotSectionsPanel({ botId, botName }: Props) {
+export default function BotSectionsPanel({ botId, botName, platform, description }: Props) {
     const searchParams = useSearchParams();
     const isNewBot = searchParams.get('wizard') === 'true';
 
@@ -36,7 +39,7 @@ export default function BotSectionsPanel({ botId, botName }: Props) {
     const [saving, setSaving] = useState(false);
 
     // Initial data for edit modal (to support canceling changes)
-    const [editData, setEditData] = useState<SectionData | null>(null);
+    const [editData, setEditData] = useState<any | null>(null);
 
     // Load sections on mount
     useEffect(() => {
@@ -73,6 +76,10 @@ export default function BotSectionsPanel({ botId, botName }: Props) {
     }, [isNewBot, loading]);
 
     const getSectionSummary = (sectionId: string): string => {
+        if (sectionId === 'settings') {
+            return `${botName} (${platform || 'whatsapp'})`;
+        }
+
         if (!data) return 'Не настроено';
 
         switch (sectionId) {
@@ -96,20 +103,21 @@ export default function BotSectionsPanel({ botId, botName }: Props) {
     };
 
     const handleWizardComplete = async () => {
-        // Reload data
-        try {
-            const res = await fetch(`/api/bots/${botId}/sections`);
-            if (res.ok) {
-                const newData = await res.json();
-                setData(newData);
-            }
-        } catch (e) { }
-        setShowWizard(false);
+        // Reload page to reflect name/platform changes
+        window.location.reload();
     };
 
     const openEditModal = (sectionId: string) => {
         setEditingSection(sectionId);
-        setEditData(JSON.parse(JSON.stringify(data))); // Deep copy
+        if (sectionId === 'settings') {
+            setEditData({
+                name: botName,
+                platform: platform || 'whatsapp',
+                description: description || ''
+            });
+        } else {
+            setEditData(JSON.parse(JSON.stringify(data))); // Deep copy
+        }
     };
 
     const closeEditModal = () => {
@@ -121,13 +129,22 @@ export default function BotSectionsPanel({ botId, botName }: Props) {
         if (!editData) return;
         setSaving(true);
         try {
-            await fetch(`/api/bots/${botId}/sections`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(editData),
-            });
-            setData(editData);
-            setEditingSection(null);
+            if (editingSection === 'settings') {
+                await fetch(`/api/bots/${botId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(editData),
+                });
+                window.location.reload(); // Reload to update bot name/platform in header
+            } else {
+                await fetch(`/api/bots/${botId}/sections`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(editData),
+                });
+                setData(editData);
+                setEditingSection(null);
+            }
         } catch (error) {
             console.error('Failed to save:', error);
         } finally {
@@ -135,45 +152,56 @@ export default function BotSectionsPanel({ botId, botName }: Props) {
         }
     };
 
-    const updateEditData = (section: keyof SectionData, updates: any) => {
+    const updateEditData = (section: string, updates: any) => {
         if (!editData) return;
-        setEditData({
-            ...editData,
-            [section]: { ...editData[section], ...updates }
-        });
+
+        if (editingSection === 'settings') {
+            setEditData({ ...editData, ...updates });
+        } else {
+            setEditData({
+                ...editData,
+                [section]: { ...editData[section as keyof SectionData], ...updates }
+            });
+        }
     };
 
     // Generate preview message
     const getPreviewMessage = (): string => {
         if (!editData || !editingSection) return '';
 
+        if (editingSection === 'settings') {
+            return `Привет! Я ${editData.name}. \nПлатформа: ${editData.platform}\n${editData.description}`;
+        }
+
+        // Cast editData to SectionData for the following sections
+        const data = editData as SectionData;
         const section = editingSection as keyof SectionData;
 
         switch (section) {
             case 'greeting':
-                if (editData.greeting.mode === 'ai') {
+                if (data.greeting.mode === 'ai') {
                     return `🤖 Привет! Я ваш ИИ-ассистент ${botName}. Чем могу помочь сегодня?`;
                 }
-                return editData.greeting.text || 'Введите приветствие...';
+                return data.greeting.text || 'Введите приветствие...';
             case 'services':
-                if (editData.services.mode === 'ai') {
+                if (data.services.mode === 'ai') {
                     return '🤖 Расскажу о наших услугах! Вот что мы предлагаем...';
                 }
-                const services = editData.services.items.filter(s => s.name);
+                const services = (data.services.items || []).filter((s) => s.name);
                 if (services.length === 0) return 'Добавьте услуги...';
-                return `💰 Наши услуги:\n${services.map(s => `• ${s.name} — ${s.price}₸`).join('\n')}`;
+                return `💰 Наши услуги:\n${services.map((s) => `• ${s.name} — ${s.price}₸`).join('\n')}`;
             case 'schedule':
-                if (editData.schedule.mode === 'ai') {
+                if (data.schedule.mode === 'ai') {
                     return '🤖 Мы работаем по удобному графику. Когда вам удобно?';
                 }
-                const workDays = editData.schedule.days.filter(d => d.enabled);
+                const workDays = (data.schedule.days || []).filter((d) => d.enabled);
                 if (workDays.length === 0) return 'Укажите рабочие дни...';
-                return `📅 График работы:\n${workDays.map(d => `• ${d.day}: ${d.from} - ${d.to}`).join('\n')}`;
+                return `📅 График работы:\n${workDays.map((d) => `• ${d.day}: ${d.from} - ${d.to}`).join('\n')}`;
             case 'faq':
-                if (editData.faq.mode === 'ai') {
+                if (data.faq.mode === 'ai') {
                     return '🤖 Отвечу на любые ваши вопросы!';
                 }
-                const faqs = editData.faq.items.filter(f => f.question);
+                const faqs = (data.faq.items || []).filter((f) => f.question);
                 if (faqs.length === 0) return 'Добавьте частые вопросы...';
                 return faqs[0].answer || 'Введите ответ...';
             default:
@@ -196,7 +224,14 @@ export default function BotSectionsPanel({ botId, botName }: Props) {
                 botId={botId}
                 botName={botName}
                 onComplete={handleWizardComplete}
-                initialData={data || undefined}
+                initialData={{
+                    ...data,
+                    settings: {
+                        name: botName,
+                        platform: platform || 'whatsapp',
+                        description: description || ''
+                    }
+                }}
             />
         );
     }
@@ -222,7 +257,8 @@ export default function BotSectionsPanel({ botId, botName }: Props) {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {SECTIONS.map((section) => {
                     const Icon = section.icon;
-                    const isConfigured = data && (data as any)[section.id];
+                    // For settings, it's always configured. For others, check data.
+                    const isConfigured = section.id === 'settings' || (data && (data as any)[section.id]);
 
                     return (
                         <button
@@ -236,12 +272,14 @@ export default function BotSectionsPanel({ botId, botName }: Props) {
                             <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${section.color === 'emerald' ? 'bg-emerald-500/20' :
                                 section.color === 'blue' ? 'bg-blue-500/20' :
                                     section.color === 'purple' ? 'bg-purple-500/20' :
-                                        'bg-amber-500/20'
+                                        section.color === 'amber' ? 'bg-amber-500/20' :
+                                            'bg-white/10'
                                 }`}>
                                 <Icon className={`w-5 h-5 ${section.color === 'emerald' ? 'text-emerald-400' :
                                     section.color === 'blue' ? 'text-blue-400' :
                                         section.color === 'purple' ? 'text-purple-400' :
-                                            'text-amber-400'
+                                            section.color === 'amber' ? 'text-amber-400' :
+                                                'text-white'
                                     }`} />
                             </div>
                             <h3 className="font-medium text-white text-sm mb-1">{section.title}</h3>
@@ -268,6 +306,12 @@ export default function BotSectionsPanel({ botId, botName }: Props) {
                             </div>
 
                             <div className="flex-1 overflow-y-auto p-6">
+                                {editingSection === 'settings' && (
+                                    <BotSettingsStep
+                                        data={editData}
+                                        onChange={(updates) => updateEditData('settings', updates)}
+                                    />
+                                )}
                                 {editingSection === 'greeting' && (
                                     <GreetingStep
                                         data={editData.greeting}
@@ -318,7 +362,7 @@ export default function BotSectionsPanel({ botId, botName }: Props) {
                                 <h4 className="text-white font-medium mb-1">Live Preview</h4>
                                 <p className="text-xs text-gray-500">Как это видит клиент</p>
                             </div>
-                            <PhonePreview message={getPreviewMessage()} botName={botName} />
+                            <PhonePreview message={getPreviewMessage()} botName={editData.name || botName} />
                         </div>
                     </div>
                 </div>

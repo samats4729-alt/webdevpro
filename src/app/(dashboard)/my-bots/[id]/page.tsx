@@ -15,6 +15,8 @@ import BotSectionsPanel from "@/components/bot/BotSectionsPanel";
 interface BotData {
     id: string;
     name: string;
+    description?: string;
+    platform?: string;
     welcome_message: string;
     auto_reply_enabled: boolean;
     auto_reply_message: string;
@@ -83,7 +85,7 @@ export default function BotDetailPage({ params }: { params: { id: string } }) {
                     </div>
                     <div>
                         <h1 className="text-lg font-semibold text-white">{bot?.name || 'Bot'}</h1>
-                        <span className="text-[10px] text-gray-500">WhatsApp Bot</span>
+                        <span className="text-[10px] text-gray-500 capitalize">{bot?.platform || 'whatsapp'} Bot</span>
                     </div>
                 </div>
             </div>
@@ -129,7 +131,14 @@ export default function BotDetailPage({ params }: { params: { id: string } }) {
             </div>
 
             {activeTab === 'overview' && <OverviewTab />}
-            {activeTab === 'settings' && bot && <BotSectionsPanel botId={params.id} botName={bot.name} />}
+            {activeTab === 'settings' && bot && (
+                <BotSectionsPanel
+                    botId={params.id}
+                    botName={bot.name}
+                    platform={bot.platform}
+                    description={bot.description}
+                />
+            )}
             {activeTab === 'flows' && <FlowsTab botId={params.id} />}
             {activeTab === 'whatsapp' && <WhatsAppConnector botId={params.id} />}
             {activeTab === 'telegram' && <TelegramConnector botId={params.id} />}

@@ -1,6 +1,6 @@
 "use client";
 
-import { Sparkles, FileText, Clock, HelpCircle, Plus } from "lucide-react";
+import { Sparkles, FileText, Clock, HelpCircle, Plus, Settings } from "lucide-react";
 
 // Shared Components
 export function ModeToggle({ mode, onChange }: { mode: 'ai' | 'template'; onChange: (mode: 'ai' | 'template') => void }) {
@@ -91,7 +91,52 @@ export function PhonePreview({ message, botName }: { message: string; botName: s
     );
 }
 
-// Step 1: Greeting
+// Step 1: General Settings
+export function BotSettingsStep({ data, onChange }: { data: { name: string; platform: string; description: string }; onChange: (updates: any) => void }) {
+    return (
+        <div className="space-y-4">
+            <div>
+                <label className="block text-sm text-gray-400 mb-1">Название бота</label>
+                <input
+                    value={data.name}
+                    onChange={(e) => onChange({ name: e.target.value })}
+                    placeholder="Мой крутой бот..."
+                    className="w-full px-4 py-2.5 bg-white/[0.04] border border-white/[0.08] rounded-xl text-white placeholder:text-gray-600 focus:outline-none focus:border-emerald-500/50"
+                />
+            </div>
+
+            <div>
+                <label className="block text-sm text-gray-400 mb-1">Платформа</label>
+                <div className="grid grid-cols-3 gap-2">
+                    {['whatsapp', 'telegram', 'instagram'].map((platform) => (
+                        <button
+                            key={platform}
+                            onClick={() => onChange({ platform })}
+                            className={`flex items-center justify-center px-4 py-2.5 rounded-xl border text-sm capitalize transition-all ${data.platform === platform
+                                ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400'
+                                : 'bg-white/[0.04] border-white/[0.08] text-gray-500 hover:border-white/[0.15]'
+                                }`}
+                        >
+                            {platform}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            <div>
+                <label className="block text-sm text-gray-400 mb-1">Описание (опционально)</label>
+                <textarea
+                    value={data.description}
+                    onChange={(e) => onChange({ description: e.target.value })}
+                    placeholder="Для чего этот бот?"
+                    className="w-full h-24 px-4 py-2.5 bg-white/[0.04] border border-white/[0.08] rounded-xl text-white placeholder:text-gray-600 focus:outline-none focus:border-emerald-500/50 resize-none"
+                />
+            </div>
+        </div>
+    );
+}
+
+// Step 2: Greeting
 export function GreetingStep({ data, onChange }: { data: { mode: 'ai' | 'template'; text: string }; onChange: (updates: any) => void }) {
     return (
         <div>
@@ -117,7 +162,7 @@ export function GreetingStep({ data, onChange }: { data: { mode: 'ai' | 'templat
     );
 }
 
-// Step 2: Services
+// Step 3: Services
 export function ServicesStep({ data, onChange }: { data: { mode: 'ai' | 'template'; items: any[] }; onChange: (updates: any) => void }) {
     const addService = () => {
         onChange({ items: [...data.items, { name: '', price: 0 }] });
@@ -184,7 +229,7 @@ export function ServicesStep({ data, onChange }: { data: { mode: 'ai' | 'templat
     );
 }
 
-// Step 3: Schedule
+// Step 4: Schedule
 export function ScheduleStep({ data, onChange }: { data: { mode: 'ai' | 'template'; days: any[] }; onChange: (updates: any) => void }) {
     const toggleDay = (index: number) => {
         const newDays = [...data.days];
@@ -250,7 +295,7 @@ export function ScheduleStep({ data, onChange }: { data: { mode: 'ai' | 'templat
     );
 }
 
-// Step 4: FAQ
+// Step 5: FAQ
 export function FaqStep({ data, onChange }: { data: { mode: 'ai' | 'template'; items: any[] }; onChange: (updates: any) => void }) {
     const addFaq = () => {
         onChange({ items: [...data.items, { question: '', answer: '' }] });
@@ -329,6 +374,11 @@ export function DoneStep({ data }: { data: any }) {
 
             <div className="grid grid-cols-2 gap-3 text-left">
                 <div className="p-3 rounded-xl bg-white/[0.04]">
+                    <span className="text-xs text-gray-500">Бот</span>
+                    <p className="text-sm text-white font-medium">{data.settings.name}</p>
+                    <p className="text-xs text-gray-600 capitalize">{data.settings.platform}</p>
+                </div>
+                <div className="p-3 rounded-xl bg-white/[0.04]">
                     <span className="text-xs text-gray-500">Приветствие</span>
                     <p className="text-sm text-white">{data.greeting.mode === 'ai' ? '🤖 ИИ' : '📝 Шаблон'}</p>
                 </div>
@@ -348,4 +398,3 @@ export function DoneStep({ data }: { data: any }) {
         </div>
     );
 }
-

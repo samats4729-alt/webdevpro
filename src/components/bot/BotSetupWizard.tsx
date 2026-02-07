@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, Check, Sparkles, FileText, Clock, HelpCircle, Rocket } from "lucide-react";
-import { GreetingStep, ServicesStep, ScheduleStep, FaqStep, DoneStep, PhonePreview } from "./BotWizardSteps";
+import { ChevronLeft, ChevronRight, Check, Sparkles, FileText, Clock, HelpCircle, Rocket, Settings } from "lucide-react";
+import { GreetingStep, ServicesStep, ScheduleStep, FaqStep, DoneStep, PhonePreview, BotSettingsStep } from "./BotWizardSteps";
 
 interface WizardStep {
     id: string;
@@ -11,6 +11,11 @@ interface WizardStep {
 }
 
 interface WizardData {
+    settings: {
+        name: string;
+        platform: string;
+        description: string;
+    };
     greeting: {
         mode: 'ai' | 'template';
         text: string;
@@ -30,6 +35,7 @@ interface WizardData {
 }
 
 const STEPS: WizardStep[] = [
+    { id: 'settings', title: 'О боте', icon: Settings },
     { id: 'greeting', title: 'Приветствие', icon: Sparkles },
     { id: 'services', title: 'Услуги', icon: FileText },
     { id: 'schedule', title: 'График', icon: Clock },
@@ -58,6 +64,11 @@ export default function BotSetupWizard({ botId, botName, onComplete, initialData
     const [step, setStep] = useState(0);
     const [saving, setSaving] = useState(false);
     const [data, setData] = useState<WizardData>({
+        settings: {
+            name: botName,
+            platform: 'whatsapp',
+            description: '',
+        },
         greeting: {
             mode: initialData?.greeting?.mode || 'ai',
             text: initialData?.greeting?.text || `Привет! Я бот ${botName}. Чем могу помочь?`,
@@ -82,17 +93,39 @@ export default function BotSetupWizard({ botId, botName, onComplete, initialData
     const handleSave = async () => {
         setSaving(true);
         try {
+            // 1. Save sections
             await fetch(`/api/bots/${botId}/sections`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data),
+                body: JSON.stringify({
+                    greeting: data.greeting,
+                    services: data.services,
+                    schedule: data.schedule,
+                    faq: data.faq
+                }),
             });
+
+            // 2. Update bot details (name, platform)
+            await fetch(`/api/bots/${botId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: data.settings.name,
+                    platform: data.settings.platform,
+                    description: data.settings.description
+                }),
+            });
+
             onComplete();
         } catch (error) {
             console.error('Failed to save:', error);
         } finally {
             setSaving(false);
         }
+    };
+
+    const updateSettings = (updates: Partial<WizardData['settings']>) => {
+        setData(prev => ({ ...prev, settings: { ...prev.settings, ...updates } }));
     };
 
     const updateGreeting = (updates: Partial<WizardData['greeting']>) => {
@@ -114,26 +147,28 @@ export default function BotSetupWizard({ botId, botName, onComplete, initialData
     // Generate preview message based on current step
     const getPreviewMessage = (): string => {
         switch (step) {
-            case 0: // Greeting
+            case 0: // Settings
+                return `Привет! Я ${data.settings.name}. \nПлатформа: ${data.settings.platform}\n${data.settings.description}`;
+            case 1: // Greeting
                 if (data.greeting.mode === 'ai') {
-                    return `🤖 Привет! Я ваш ИИ-ассистент ${botName}. Чем могу помочь сегодня?`;
+                    return `🤖 Привет! Я ваш ИИ-ассистент ${data.settings.name}. Чем могу помочь сегодня?`;
                 }
                 return data.greeting.text || 'Введите приветствие...';
-            case 1: // Services
+            case 2: // Services
                 if (data.services.mode === 'ai') {
                     return '🤖 Расскажу о наших услугах! Вот что мы предлагаем...';
                 }
                 const services = data.services.items.filter(s => s.name);
                 if (services.length === 0) return 'Добавьте услуги...';
                 return `💰 Наши услуги:\n${services.map(s => `• ${s.name} — ${s.price}₸`).join('\n')}`;
-            case 2: // Schedule
+            case 3: // Schedule
                 if (data.schedule.mode === 'ai') {
                     return '🤖 Мы работаем по удобному графику. Когда вам удобно?';
                 }
                 const workDays = data.schedule.days.filter(d => d.enabled);
                 if (workDays.length === 0) return 'Укажите рабочие дни...';
                 return `📅 График работы:\n${workDays.map(d => `• ${d.day}: ${d.from} - ${d.to}`).join('\n')}`;
-            case 3: // FAQ
+            case 4: // FAQ
                 if (data.faq.mode === 'ai') {
                     return '🤖 Отвечу на любые ваши вопросы!';
                 }
@@ -141,7 +176,7 @@ export default function BotSetupWizard({ botId, botName, onComplete, initialData
                 if (faqs.length === 0) return 'Добавьте частые вопросы...';
                 return faqs[0].answer || 'Введите ответ...';
             default:
-                return `Привет! Я бот ${botName}. Рад вас видеть! 👋`;
+                return `Привет! Я бот ${data.settings.name}. Рад вас видеть! 👋`;
         }
     };
 
@@ -185,30 +220,36 @@ export default function BotSetupWizard({ botId, botName, onComplete, initialData
                 {/* Step Content */}
                 <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/[0.06] mb-6">
                     {step === 0 && (
+                        <BotSettingsStep
+                            data={data.settings}
+                            onChange={updateSettings}
+                        />
+                    )}
+                    {step === 1 && (
                         <GreetingStep
                             data={data.greeting}
                             onChange={updateGreeting}
                         />
                     )}
-                    {step === 1 && (
+                    {step === 2 && (
                         <ServicesStep
                             data={data.services}
                             onChange={updateServices}
                         />
                     )}
-                    {step === 2 && (
+                    {step === 3 && (
                         <ScheduleStep
                             data={data.schedule}
                             onChange={updateSchedule}
                         />
                     )}
-                    {step === 3 && (
+                    {step === 4 && (
                         <FaqStep
                             data={data.faq}
                             onChange={updateFaq}
                         />
                     )}
-                    {step === 4 && (
+                    {step === 5 && (
                         <DoneStep data={data} />
                     )}
                 </div>
@@ -250,7 +291,7 @@ export default function BotSetupWizard({ botId, botName, onComplete, initialData
                 <div className="mb-4 text-center lg:hidden">
                     <p className="text-emerald-400 text-sm font-medium">Предпросмотр на телефоне ↓</p>
                 </div>
-                <PhonePreview message={getPreviewMessage()} botName={botName} />
+                <PhonePreview message={getPreviewMessage()} botName={data.settings.name} />
                 <p className="mt-4 text-xs text-gray-500 text-center max-w-xs">
                     * Это предпросмотр. Реальный бот обновится после нажатия "Запустить бота".
                 </p>

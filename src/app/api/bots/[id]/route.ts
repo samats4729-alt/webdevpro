@@ -53,7 +53,7 @@ export async function PATCH(
         }
 
         // Only allow updating specific fields
-        const allowedFields = ['name', 'welcome_message', 'auto_reply_enabled', 'auto_reply_message'];
+        const allowedFields = ['name', 'welcome_message', 'auto_reply_enabled', 'auto_reply_message', 'platform', 'description'];
         const updates: any = {};
 
         for (const field of allowedFields) {
