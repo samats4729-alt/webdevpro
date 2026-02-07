@@ -37,10 +37,14 @@ export default function LoginPage() {
 
     const handleGoogleLogin = async () => {
         const supabase = createClient();
+        // Use production URL or window.location.origin for local dev
+        const siteUrl = window.location.hostname === 'localhost'
+            ? window.location.origin
+            : 'https://www.webdev-pro.kz';
         const { error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
-                redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}/auth/callback`,
+                redirectTo: `${siteUrl}/auth/callback`,
             },
         });
 
