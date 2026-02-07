@@ -36,7 +36,7 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="min-h-screen bg-[#020202] flex items-center justify-center px-6 relative overflow-hidden font-sans text-white">
+        <div className="min-h-screen bg-red-600 flex items-center justify-center px-6 relative overflow-hidden font-sans text-white">
             {/* --- Premium Background Effects --- */}
 
             {/* Animated Grid */}
