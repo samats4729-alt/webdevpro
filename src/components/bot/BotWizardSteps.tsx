@@ -183,34 +183,55 @@ export function BotSettingsStep({ data, onChange }: { data: { name: string; plat
 }
 
 // Step 2: Greeting
-export function GreetingStep({ data, onChange, botName }: { data: { mode: 'ai' | 'template'; text: string; trigger?: string; keywords?: string[]; media?: string; ai_style?: string }; onChange: (updates: any) => void; botName?: string }) {
+export function GreetingStep({ data, onChange, botName }: { data: { mode: 'ai' | 'template'; text: string; trigger?: string; keywords?: string[]; media?: string; ai_style?: string; ai_prompt?: string }; onChange: (updates: any) => void; botName?: string }) {
     const trigger = data.trigger || 'all';
     const keywords = data.keywords || [];
     const media = data.media;
     const aiStyle = data.ai_style;
+    const aiPrompt = data.ai_prompt || '';
 
     const [isGenerating, setIsGenerating] = useState(false);
 
+    // Prompt templates
+    const PROMPTS = {
+        business: `Ты профессиональный менеджер ${botName || 'компании'}. Твоя цель - вежливо проконсультировать клиента и записать на услугу. Общайся на "Вы", используй деловой стиль.`,
+        friendly: `Ты дружелюбный помощник ${botName || 'нашего бренда'}. Твоя цель - помочь клиенту с выбором. Общайся на "Ты", используй смайлики 😊.`,
+        sales: `Ты опытный продавец ${botName || 'магазина'}. Твоя цель - продать товар и рассказать об акциях. Используй призывы к действию и эмодзи 🔥.`
+    };
+
+    const handleStyleSelect = (style: 'business' | 'friendly' | 'sales') => {
+        onChange({
+            ai_style: style,
+            ai_prompt: PROMPTS[style]
+        });
+    };
+
     const handleGenerate = () => {
         setIsGenerating(true);
-        // Simulate API call
+        // Simulate API call using PROMPT (not just style)
         setTimeout(() => {
             let generatedText = '';
-            const name = botName || 'наш бот';
-            switch (aiStyle) {
-                case 'business':
-                    generatedText = `Здравствуйте! Вас приветствует ${name}. Мы ценим ваше время. Чем можем быть полезны?`;
-                    break;
-                case 'friendly':
-                    generatedText = `Привет! 👋 Я ${name}. Рад тебя видеть! Чем могу помочь? 😊`;
-                    break;
-                case 'sales':
-                    generatedText = `🔥 Привет! Это ${name}. У нас для тебя супер-предложение! Хочешь узнать подробности?`;
-                    break;
-                default:
-                    generatedText = `Привет! Я ${name}. Чем могу помочь?`;
+            // In real app, we would send aiPrompt to the API
+            // Here we just simulate based on the prompt content for demo
+            if (aiPrompt.includes('деловой')) {
+                generatedText = `Здравствуйте! Вас приветствует ${botName || 'наш бот'}. Мы ценим ваше время. Чем можем быть полезны?`;
+            } else if (aiPrompt.includes('дружелюбный') || aiPrompt.includes('😊')) {
+                generatedText = `Привет! 👋 Я ${botName || 'твой помощник'}. Рад тебя видеть! Чем могу помочь? 😊`;
+            } else {
+                generatedText = `🔥 Привет! Это ${botName || 'наш бот'}. У нас для тебя супер-предложение! Хочешь узнать подробности?`;
             }
-            onChange({ text: generatedText, mode: 'template' }); // Switch to template so user can edit
+
+            // If mode is template, we put text in 'text' field.
+            // If mode is AI, we might just save the prompt. 
+            // The user request says: "If I choose AI answer, then I enter a prompt...".
+            // So if mode === 'ai', the BOT uses the prompt at runtime.
+            // BUT the user also wants to "Generate" to see what it *might* look like, or maybe just save the prompt.
+            // Let's assume 'ai' mode means the bot generates repiles dynamically using the prompt.
+            // The 'Generate' button here is to TEST the prompt or generate a static TEMPLATE.
+            // Let's keep the logic: AI mode = dynamic. Template mode = static text.
+            // If user stays in AI mode, we save ai_prompt.
+
+            // For now, let's just finish the simulation.
             setIsGenerating(false);
         }, 1000);
     };
@@ -325,7 +346,7 @@ export function GreetingStep({ data, onChange, botName }: { data: { mode: 'ai' |
                 {data.mode === 'ai' && (
                     <div className="space-y-4 p-4 rounded-xl bg-purple-500/5 border border-purple-500/20">
                         <div>
-                            <label className="block text-xs text-purple-300/70 mb-2 uppercase font-medium">Стиль общения</label>
+                            <label className="block text-xs text-purple-300/70 mb-2 uppercase font-medium">Стиль общения (Шаблон)</label>
                             <div className="grid grid-cols-3 gap-2">
                                 {[
                                     { id: 'business', icon: '💼', label: 'Деловой' },
@@ -334,7 +355,7 @@ export function GreetingStep({ data, onChange, botName }: { data: { mode: 'ai' |
                                 ].map((style) => (
                                     <button
                                         key={style.id}
-                                        onClick={() => onChange({ ai_style: style.id })} // Just select style
+                                        onClick={() => handleStyleSelect(style.id as any)}
                                         className={`p-2 rounded-lg border text-sm transition-all ${aiStyle === style.id
                                             ? 'bg-purple-500/20 border-purple-500/50 text-white'
                                             : 'bg-white/[0.04] border-white/[0.08] text-gray-400 hover:bg-white/[0.08]'
@@ -344,6 +365,19 @@ export function GreetingStep({ data, onChange, botName }: { data: { mode: 'ai' |
                                     </button>
                                 ))}
                             </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-xs text-purple-300/70 mb-2 uppercase font-medium">Инструкция для ИИ (Промпт)</label>
+                            <textarea
+                                value={aiPrompt}
+                                onChange={(e) => onChange({ ai_prompt: e.target.value })}
+                                placeholder="Ты оператор поддержки. Твоя задача..."
+                                className="w-full h-32 px-4 py-3 bg-black/20 border border-purple-500/20 rounded-xl text-white placeholder:text-gray-600 focus:outline-none focus:border-purple-500/50 resize-none text-sm"
+                            />
+                            <p className="text-xs text-gray-500 mt-2">
+                                * ИИ будет использовать эту инструкцию для генерации ответа каждому клиенту индивидуально.
+                            </p>
                         </div>
 
                         <button

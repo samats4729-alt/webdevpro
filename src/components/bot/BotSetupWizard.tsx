@@ -23,6 +23,7 @@ interface WizardData {
         keywords?: string[];
         media?: string;
         ai_style?: string;
+        ai_prompt?: string;
     };
     services: {
         mode: 'ai' | 'template';
@@ -92,6 +93,7 @@ export default function BotSetupWizard({ botId, botName, onComplete, initialData
                 keywords: initialData?.greeting?.keywords || [],
                 media: initialData?.greeting?.media || null,
                 ai_style: initialData?.greeting?.ai_style || null,
+                ai_prompt: initialData?.greeting?.ai_prompt || null,
             },
             services: {
                 mode: initialData?.services?.mode || 'template',

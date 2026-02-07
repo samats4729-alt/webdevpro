@@ -14,6 +14,7 @@ interface SectionData {
         keywords?: string[];
         media?: string;
         ai_style?: string;
+        ai_prompt?: string;
     };
     services: {
         mode: 'ai' | 'template';
@@ -134,6 +135,7 @@ export default function BotSectionsPanel({ botId, botName, platform, description
                 currentData.greeting.keywords = [];
                 currentData.greeting.media = null;
                 currentData.greeting.ai_style = null;
+                currentData.greeting.ai_prompt = null;
             }
             if (currentData.services && !currentData.services.items[0]?.category) {
                 // Migration for legacy services
