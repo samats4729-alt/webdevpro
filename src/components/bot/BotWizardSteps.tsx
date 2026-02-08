@@ -191,8 +191,10 @@ export function GreetingStep({ data, onChange, botName }: { data: { mode: 'ai' |
     const aiPrompt = data.ai_prompt || '';
 
     const [isGenerating, setIsGenerating] = useState(false);
+    const [promptKeywords, setPromptKeywords] = useState('');
+    const [isGeneratingPrompt, setIsGeneratingPrompt] = useState(false);
 
-    // Prompt templates
+    // Prompt templates (keep for quick styles)
     const PROMPTS = {
         business: `ДЕЙСТВУЙ КАК профессиональный администратор ${botName || 'компании'}.\nТВОЯ ЦЕЛЬ: Вежливо проконсультировать клиента, выявить потребность и записать на услугу.\nПРАВИЛА:\n1. Общайся строго на "Вы".\n2. Используй деловой, уважительный тон.\n3. Отвечай кратко и по делу.\n4. Если клиент спрашивает цену - назови вилку цен и предложи записаться на консультацию.\n5. Не используй сленг и смайлики.`,
         friendly: `ДЕЙСТВУЙ КАК дружелюбный и заботливый помощник ${botName || 'нашего бренда'}.\nТВОЯ ЦЕЛЬ: Расположить клиента к себе и помочь с выбором.\nПРАВИЛА:\n1. Общайся на "Ты", как с другом.\n2. Используй смайлики 😊✨, но в меру.\n3. Проявляй эмпатию и интерес.\n4. Предлагай лучшие варианты исходя из пожеланий.\n5. В конце сообщения задавай вовлекающий вопрос.`,
@@ -201,11 +203,38 @@ export function GreetingStep({ data, onChange, botName }: { data: { mode: 'ai' |
 
     const handleStyleSelect = (style: 'business' | 'friendly' | 'sales') => {
         const promptTemplate = PROMPTS[style];
-        // Explicitly update both style and prompt
         onChange({
             ai_style: style,
             ai_prompt: promptTemplate
         });
+    };
+
+    // GENERATE SYSTEM PROMPT from keywords
+    const handleGeneratePrompt = () => {
+        if (!promptKeywords.trim()) return;
+        setIsGeneratingPrompt(true);
+        setTimeout(() => {
+            const keys = promptKeywords.toLowerCase();
+            let newPrompt = `ДЕЙСТВУЙ КАК умный ассистент ${botName || 'бизнеса'}.\n`;
+
+            // Infer Role & Goal from keywords
+            if (keys.includes('продаж') || keys.includes('магазин') || keys.includes('товар')) {
+                newPrompt += `ТВОЯ ЦЕЛЬ: Активно продавать товары и консультировать по ассортименту.\n`;
+            } else if (keys.includes('запись') || keys.includes('бронь') || keys.includes('услуг')) {
+                newPrompt += `ТВОЯ ЦЕЛЬ: Записать клиента на услугу и подобрать удобное время.\n`;
+            } else if (keys.includes('поддержк') || keys.includes('помощ')) {
+                newPrompt += `ТВОЯ ЦЕЛЬ: Решать проблемы пользователей и отвечать на вопросы.\n`;
+            } else {
+                newPrompt += `ТВОЯ ЦЕЛЬ: Консультировать клиентов и помогать им.\n`;
+            }
+
+            newPrompt += `КОНТЕКСТ: ${promptKeywords}\n`;
+
+            newPrompt += `ПРАВИЛА:\n1. Будь вежлив и профессионален.\n2. Опирайся на предоставленный контекст.\n3. Веди диалог к целевому действию.`;
+
+            onChange({ ai_prompt: newPrompt });
+            setIsGeneratingPrompt(false);
+        }, 1500);
     };
 
     const handleGenerate = () => {
@@ -338,26 +367,27 @@ export function GreetingStep({ data, onChange, botName }: { data: { mode: 'ai' |
                 )}
 
                 {data.mode === 'ai' && (
-                    <div className="space-y-4 p-4 rounded-xl bg-purple-500/5 border border-purple-500/20">
-                        <div>
-                            <label className="block text-xs text-purple-300/70 mb-2 uppercase font-medium">Стиль общения (Шаблон)</label>
-                            <div className="grid grid-cols-3 gap-2">
-                                {[
-                                    { id: 'business', icon: '💼', label: 'Деловой' },
-                                    { id: 'friendly', icon: '👋', label: 'Дружелюбный' },
-                                    { id: 'sales', icon: '🔥', label: 'Продающий' }
-                                ].map((style) => (
-                                    <button
-                                        key={style.id}
-                                        onClick={() => handleStyleSelect(style.id as any)}
-                                        className={`p-2 rounded-lg border text-sm transition-all ${aiStyle === style.id
-                                            ? 'bg-purple-500/20 border-purple-500/50 text-white'
-                                            : 'bg-white/[0.04] border-white/[0.08] text-gray-400 hover:bg-white/[0.08]'
-                                            }`}
-                                    >
-                                        <span className="mr-1">{style.icon}</span> {style.label}
-                                    </button>
-                                ))}
+                    <div className="space-y-6 p-4 rounded-xl bg-purple-500/5 border border-purple-500/20">
+                        {/* Prompt Generator */}
+                        <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.08]">
+                            <label className="block text-xs text-purple-300 mb-2 font-medium flex items-center gap-2">
+                                <Sparkles className="w-3 h-3" />
+                                Опишите своего бота (Ключи)
+                            </label>
+                            <div className="flex gap-2">
+                                <input
+                                    value={promptKeywords}
+                                    onChange={(e) => setPromptKeywords(e.target.value)}
+                                    placeholder="Например: Салон красоты, вежливо, запись на стрижку..."
+                                    className="flex-1 px-3 py-2 bg-black/20 border border-white/[0.1] rounded-lg text-white text-sm focus:outline-none focus:border-purple-500/50"
+                                />
+                                <button
+                                    onClick={handleGeneratePrompt}
+                                    disabled={!promptKeywords.trim() || isGeneratingPrompt}
+                                    className="px-4 py-2 bg-purple-500 hover:bg-purple-600 disabled:opacity-50 rounded-lg text-white text-xs font-medium transition-colors"
+                                >
+                                    {isGeneratingPrompt ? 'Создаю...' : 'Создать инструкцию'}
+                                </button>
                             </div>
                         </div>
 
@@ -366,35 +396,41 @@ export function GreetingStep({ data, onChange, botName }: { data: { mode: 'ai' |
                             <textarea
                                 value={aiPrompt}
                                 onChange={(e) => onChange({ ai_prompt: e.target.value })}
-                                placeholder="Ты оператор поддержки. Твоя задача..."
-                                className="w-full h-32 px-4 py-3 bg-black/20 border border-purple-500/20 rounded-xl text-white placeholder:text-gray-600 focus:outline-none focus:border-purple-500/50 resize-none text-sm"
+                                placeholder="Сгенерируйте инструкцию выше или напишите свою..."
+                                className="w-full h-40 px-4 py-3 bg-black/20 border border-purple-500/20 rounded-xl text-white placeholder:text-gray-600 focus:outline-none focus:border-purple-500/50 resize-none text-sm font-mono leading-relaxed"
                             />
-                            <p className="text-xs text-gray-500 mt-2">
-                                * ИИ будет использовать эту инструкцию для генерации ответа каждому клиенту индивидуально.
-                            </p>
+                            <div className="flex justify-between items-center mt-2">
+                                <p className="text-xs text-gray-500">
+                                    * Это "мозги" вашего бота. Чем точнее инструкция, тем лучше ответы.
+                                </p>
+                                <div className="flex gap-2">
+                                    {[
+                                        { id: 'business', label: 'Шаблон: Деловой' },
+                                        { id: 'friendly', label: 'Шаблон: Друг' },
+                                    ].map((style) => (
+                                        <button
+                                            key={style.id}
+                                            onClick={() => handleStyleSelect(style.id as any)}
+                                            className="text-xs text-purple-400 hover:text-purple-300 underline"
+                                        >
+                                            {style.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
 
-                        <button
-                            onClick={handleGenerate}
-                            disabled={!aiStyle || isGenerating}
-                            className="w-full py-2.5 rounded-xl bg-purple-500 hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium transition-colors flex items-center justify-center gap-2"
-                        >
-                            {isGenerating ? (
-                                <>
-                                    <Sparkles className="w-4 h-4 animate-spin" />
-                                    Генерирую...
-                                </>
-                            ) : (
-                                <>
-                                    <Sparkles className="w-4 h-4" />
-                                    Сгенерировать текст
-                                </>
-                            )}
-                        </button>
-
-                        <p className="text-xs text-purple-300/50 text-center">
-                            ИИ создаст вариант, который можно будет отредактировать
-                        </p>
+                        <div className="border-t border-white/[0.08] pt-4">
+                            <label className="block text-xs text-gray-400 mb-2">Тест инструкции</label>
+                            <button
+                                onClick={handleGenerate}
+                                disabled={!aiPrompt || isGenerating}
+                                className="w-full py-2.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.1] disabled:opacity-50 text-white text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                            >
+                                {isGenerating ? <Sparkles className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                                Проверить ответ бота
+                            </button>
+                        </div>
                     </div>
                 )}
             </div>
